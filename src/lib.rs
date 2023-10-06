@@ -445,6 +445,19 @@ impl<'i, 'o, T: Io<'i, 'o>> Uri<T> {
     }
 }
 
+impl<'i, 'o, T: Io<'i, 'o>> PartialEq for Uri<T> {
+    #[inline]
+    fn eq(&self, other: &Self) -> bool {
+        // SAFETY: The indexes are within bounds.
+        let self_bytes = unsafe { slice::from_raw_parts(self.ptr.get(), self.len() as usize) };
+        // SAFETY: The indexes are within bounds.
+        let other_bytes = unsafe { slice::from_raw_parts(other.ptr.get(), other.len() as usize) };
+        self_bytes == other_bytes
+    }
+}
+
+impl<'i, 'o, T: Io<'i, 'o>> Eq for Uri<T> {}
+
 impl<'a> Uri<&'a mut [u8]> {
     /// Parses a URI reference from a mutable byte sequence into a `Uri<&mut [u8]>`.
     ///
@@ -1048,5 +1061,18 @@ impl Path {
         let mut split = path.split('/');
         split.finished = self.as_str().is_empty();
         split
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn compares_uri() {
+        let u = Uri::parse("http://127.0.0.1:80808/").unwrap();
+        assert_eq!(u, u);
+        let v = Uri::parse("http://127.0.0.1:80807/").unwrap();
+        assert_ne!(u, v);
     }
 }
